@@ -112,11 +112,10 @@
     <Compile Include="Observers\PocketObserverBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\PocketService.cs" />
+    <Compile Include="ViewModels\SignInPageViewModel.cs" />
     <EmbeddedResource Include="Properties\UniPocket.Shared.rd.xml" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="ViewModels\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <ProjectReference Include="..\..\UniApp\UniApp.Uwp\UniApp.Uwp.csproj">
       <Project>{b3d1ae9f-1beb-4dc8-8c33-f6d1ae017428}</Project>

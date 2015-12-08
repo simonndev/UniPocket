@@ -9,12 +9,13 @@ namespace UniPocket.Shared.Observers
 {
     public class HttpContentObserver : PocketObserverBase<byte[]>
     {
+        public string Content { get; private set; }
+
         public override void OnNext(byte[] value)
         {
             base.OnNext(value);
 
-            string html = Encoding.UTF8.GetString(value, 0, value.Length);
-            Debug.WriteLine(html);
+            this.Content = Encoding.UTF8.GetString(value, 0, value.Length);
         }
     }
 }

@@ -30,7 +30,7 @@ namespace UniPocket
         {
             this.InitializeComponent();
 
-            Start();
+            //Start();
         }
 
         private void Start()
@@ -45,8 +45,8 @@ namespace UniPocket
 
             //			await FeatureModelCollection.SearchTermAsync(string.Empty, progressIndicator);
 
-            PocketService service = new PocketService();
-            service.SubscribeBytes(new HttpContentObserver(), progressIndicator);
+            //PocketService service = new PocketService();
+            //service.s(new HttpContentObserver(), progressIndicator);
         }
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reactive.Linq;
 using System.Text;
 using System.Threading;
@@ -31,6 +32,36 @@ namespace UniApp.Uwp.Data
                 select bytes;
 
             return observeOnDispatcher ? get.ObserveOn(SynchronizationContext.Current) : get;
+        }
+
+        public static IObservable<string> PostAsObservable(string url, IDictionary<string, string> parameters,
+            bool observeOnDispatcher = true)
+        {
+            var client = new HttpClient();
+            var content = new FormUrlEncodedContent(parameters);
+            //var content = new StringContent("48820-102afe26631050c23635beed"); // Error Test
+            content.Headers.Clear();
+            content.Headers.Add("Content-Type", "application/x-www-form-urlencoded");
+
+            var post =
+                from response in Observable.FromAsync(() => client.PostAsync(url, content))
+                from responseString in Observable.FromAsync(() => response.Content.ReadAsStringAsync())
+                select responseString;
+
+            return observeOnDispatcher ? post.ObserveOn(SynchronizationContext.Current) : post;
+        }
+
+        private static string BuildJsonContent(IDictionary<string, string> parameters)
+        {
+            StringBuilder jsonBuilder = new StringBuilder();
+            int count = parameters.Count;
+            foreach (var pair in parameters)
+            {
+                string format = --count == 0 ? "\"{0}\": \"{1}\"" : "\"{0}\": \"{1}\",";
+                jsonBuilder.AppendFormat(format, pair.Key, Uri.EscapeDataString(pair.Value));
+            }
+
+            return jsonBuilder.ToString();
         }
 
         private static async Task<byte[]> ReadResponseBytesAsync(HttpResponseMessage response, IProgress<Tuple<long, long>> progress)

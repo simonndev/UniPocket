@@ -1,27 +1,33 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.ApplicationModel;
+﻿
+using Microsoft.Practices.Unity;
+using Prism.Events;
+using Prism.Mvvm;
+using Prism.Unity.Windows;
+using Prism.Windows.AppModel;
+using Prism.Windows.Navigation;
+using System;
+using System.Globalization;
+using System.Threading.Tasks;
 using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
+using Windows.ApplicationModel.Resources;
+using Windows.UI.Notifications;
+using Windows.UI.WebUI;
 using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
+using UniPocket.Shared.Services;
 
 namespace UniPocket
 {
     /// <summary>
     /// Provides application-specific behavior to supplement the default Application class.
     /// </summary>
-    sealed partial class App : Application
+    sealed partial class App : PrismUnityApplication
     {
+        // Bootstrap: App singleton service declarations
+        private TileUpdater _tileUpdater;
+
+        public IEventAggregator EventAggregator { get; set; }
+
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
         /// executed, and as such is the logical equivalent of main() or WinMain().
@@ -32,7 +38,41 @@ namespace UniPocket
                 Microsoft.ApplicationInsights.WindowsCollectors.Metadata |
                 Microsoft.ApplicationInsights.WindowsCollectors.Session);
             this.InitializeComponent();
-            this.Suspending += OnSuspending;
+        }
+
+        protected override Task OnInitializeAsync(IActivatedEventArgs args)
+        {
+            EventAggregator = new EventAggregator();
+
+            // Register MvvmAppBase services with the container so that view models can take dependencies on them
+            Container.RegisterInstance<ISessionStateService>(SessionStateService);
+            Container.RegisterInstance<INavigationService>(NavigationService);
+            Container.RegisterInstance<IEventAggregator>(EventAggregator);
+            //Container.RegisterInstance<IResourceLoader>(new ResourceLoaderAdapter(new ResourceLoader()));
+
+            // Register any app specific types with the container
+            Container.RegisterType<IPocketService, PocketService>(new ContainerControlledLifetimeManager());
+            //Container.RegisterType<ILocalStorageService, JsonDataSourceService>(new ContainerControlledLifetimeManager());
+
+            // Set a factory for the ViewModelLocator to use the container to construct view models so their
+            // dependencies get injected by the container
+            ViewModelLocationProvider.SetDefaultViewTypeToViewModelTypeResolver((viewType) =>
+            {
+                var viewModelTypeName = string.Format("UniPocket.Shared.ViewModels.{0}ViewModel, UniPocket.Shared", viewType.Name);
+                var viewModelType = Type.GetType(viewModelTypeName);
+                if (viewModelType == null)
+                {
+                    viewModelTypeName = string.Format(CultureInfo.InvariantCulture, "UniPocket.Shared.ViewModels.{0}ViewModel, UniPocket.Shared.Windows, Version=1.0.0.0, Culture=neutral", viewType.Name);
+                    viewModelType = Type.GetType(viewModelTypeName);
+                }
+
+                return viewModelType;
+            });
+
+            _tileUpdater = TileUpdateManager.CreateTileUpdaterForApplication();
+            //_tileUpdater.StartPeriodicUpdate(new Uri(Constants.ServerAddress + "/api/TileNotification"), PeriodicUpdateRecurrence.HalfHour);
+
+            return base.OnInitializeAsync(args);
         }
 
         /// <summary>
@@ -40,45 +80,32 @@ namespace UniPocket
         /// will be used such as when the application is launched to open a specific file.
         /// </summary>
         /// <param name="e">Details about the launch request and process.</param>
-        protected override void OnLaunched(LaunchActivatedEventArgs e)
+        protected override Task OnLaunchApplicationAsync(LaunchActivatedEventArgs args)
         {
-
-#if DEBUG
-            if (System.Diagnostics.Debugger.IsAttached)
+            if (!string.IsNullOrEmpty(args?.Arguments))
             {
-                this.DebugSettings.EnableFrameRateCounter = true;
+                // The app was launched from a Secondary Tile
+                // TODO: swich for the args
+                // Navigate to the item's page
+                NavigationService.Navigate("ComicViewer", args.Arguments);
             }
-#endif
-
-            Frame rootFrame = Window.Current.Content as Frame;
-
-            // Do not repeat app initialization when the Window already has content,
-            // just ensure that the window is active
-            if (rootFrame == null)
+            else
             {
-                // Create a Frame to act as the navigation context and navigate to the first page
-                rootFrame = new Frame();
-
-                rootFrame.NavigationFailed += OnNavigationFailed;
-
-                if (e.PreviousExecutionState == ApplicationExecutionState.Terminated)
-                {
-                    //TODO: Load state from previously suspended application
-                }
-
-                // Place the frame in the current Window
-                Window.Current.Content = rootFrame;
+                // Navigate to the sign-in page
+                NavigationService.Navigate("SignIn", null);
             }
 
-            if (rootFrame.Content == null)
-            {
-                // When the navigation stack isn't restored navigate to the first page,
-                // configuring the new page by passing required information as a navigation
-                // parameter
-                rootFrame.Navigate(typeof(MainPage), e.Arguments);
-            }
-            // Ensure the current window is active
             Window.Current.Activate();
+            return Task.FromResult<object>(null);
+        }
+
+        protected override void OnRegisterKnownTypesForSerialization()
+        {
+            //SessionStateService.RegisterKnownType(typeof(ComicIcons));
+            //SessionStateService.RegisterKnownType(typeof(Feature));
+            //SessionStateService.RegisterKnownType(typeof(Featured));
+            //SessionStateService.RegisterKnownType(typeof(Features));
+            //SessionStateService.RegisterKnownType(typeof(FeatureItem));
         }
 
         /// <summary>
