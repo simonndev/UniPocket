@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reactive.Linq;
@@ -34,6 +35,26 @@ namespace UniApp.Uwp.Data
             return observeOnDispatcher ? get.ObserveOn(SynchronizationContext.Current) : get;
         }
 
+        public static IObservable<string> GetStringAsObservable(string url,
+            IDictionary<string, string> parameters = null,
+            IProgress<Tuple<long, long>> progress = null,
+            bool observeOnDispatcher = true)
+        {
+            var client = new HttpClient();
+            var uri = GetUri(url, parameters);
+            var request = new HttpRequestMessage(HttpMethod.Get, uri);
+
+            var post =
+                from response in
+                    Observable.FromAsync(() => client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
+                from responseString in response.IsSuccessStatusCode
+                    ? Observable.FromAsync(() => response.Content.ReadAsStringAsync())
+                    : Observable.Throw<string>(new Exception(response.StatusCode.ToString()))
+                select responseString;
+
+            return observeOnDispatcher ? post.ObserveOn(SynchronizationContext.Current) : post;
+        }
+
         public static IObservable<string> PostAsObservable(string url, IDictionary<string, string> parameters,
             bool observeOnDispatcher = true)
         {
@@ -49,19 +70,6 @@ namespace UniApp.Uwp.Data
                 select responseString;
 
             return observeOnDispatcher ? post.ObserveOn(SynchronizationContext.Current) : post;
-        }
-
-        private static string BuildJsonContent(IDictionary<string, string> parameters)
-        {
-            StringBuilder jsonBuilder = new StringBuilder();
-            int count = parameters.Count;
-            foreach (var pair in parameters)
-            {
-                string format = --count == 0 ? "\"{0}\": \"{1}\"" : "\"{0}\": \"{1}\",";
-                jsonBuilder.AppendFormat(format, pair.Key, Uri.EscapeDataString(pair.Value));
-            }
-
-            return jsonBuilder.ToString();
         }
 
         private static async Task<byte[]> ReadResponseBytesAsync(HttpResponseMessage response, IProgress<Tuple<long, long>> progress)

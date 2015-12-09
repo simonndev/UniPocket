@@ -1,21 +1,27 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace UniPocket.Shared.Observers
 {
-    public class HttpContentObserver : PocketObserverBase<byte[]>
+    public abstract class HttpContentObserverBase<T> : IObserver<T>
     {
-        public string Content { get; private set; }
+        public event Action<T> ParseContentCompleted;
+        public event Action<Exception> ErrorCallback; 
+         
+        public T HtmlContent { get; protected set; }
 
-        public override void OnNext(byte[] value)
+        public virtual void OnCompleted()
         {
-            base.OnNext(value);
+            ParseContentCompleted?.Invoke(this.HtmlContent);
+        }
 
-            this.Content = Encoding.UTF8.GetString(value, 0, value.Length);
+        public virtual void OnError(Exception error)
+        {
+            ErrorCallback?.Invoke(error);
+        }
+
+        public virtual void OnNext(T value)
+        {
+            this.HtmlContent = value;
         }
     }
 }

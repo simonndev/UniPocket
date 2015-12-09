@@ -14,8 +14,43 @@ namespace UniPocket.Shared.Services
 {
     public interface IPocketService
     {
-        void SubscribeBytes(string url, IObserver<byte[]> observer, IDictionary<string, string> parameters = null, IProgress<Tuple<long, long>> progress = null);
-        void SubscribeOAuthRequest(IObserver<string> observer, IDictionary<string, string> parameters = null, IProgress<Tuple<long, long>> progress = null);
+        void SubscribeBytes(string url, IObserver<byte[]> observer, IDictionary<string, string> parameters = null,
+            IProgress<Tuple<long, long>> progress = null);
+
+        void SubscribeOAuthRequestToken(IObserver<string> observer, IDictionary<string, string> parameters = null,
+            IProgress<Tuple<long, long>> progress = null);
+
+        /// <summary>
+        /// GET
+        /// </summary>
+        /// <param name="observer"></param>
+        /// <param name="parameters"></param>
+        /// <param name="progress"></param>
+        void SubscribeRedirectUserForAuthorization(IObserver<string> observer,
+            IDictionary<string, string> parameters = null,
+            IProgress<Tuple<long, long>> progress = null);
+
+        /// <summary>
+        /// GET
+        /// </summary>
+        /// <param name="observer"></param>
+        /// <param name="parameters"></param>
+        /// <param name="progress"></param>
+        void SubscribeSignInRequest(IObserver<string> observer,
+            IDictionary<string, string> parameters = null,
+            IProgress<Tuple<long, long>> progress = null);
+
+        void SubscribeAuthorization(IObserver<string> observer, IDictionary<string, string> parameters = null,
+            IProgress<Tuple<long, long>> progress = null);
+
+        /// <summary>
+        /// POST to https://getpocket.com/login_process
+        /// </summary>
+        /// <param name="observer"></param>
+        /// <param name="parameters"></param>
+        /// <param name="progress"></param>
+        void SubscribeSignInProcess(IObserver<string> observer, IDictionary<string, string> parameters = null,
+            IProgress<Tuple<long, long>> progress = null);
     }
 
     /**
@@ -30,8 +65,10 @@ namespace UniPocket.Shared.Services
         private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(TIMEOUT);
 
         // https://getpocket.com/developer/docs/getstarted/windows8
-        private static string Authentication = "https://getpocket.com/v3/oauth/request";
+        private static string ObtainRequestToken = "https://getpocket.com/v3/oauth/request";
+        private static string RedirectUser = "https://getpocket.com/auth/authorize";
         private static string Authorization = "https://getpocket.com/v3/oauth/authorize";
+        private static string SignInProcess = "https://getpocket.com/login_process";
         private static string Add = "https://getpocket.com/v3/add";
         private static string Modify = "https://getpocket.com/v3/send";
         private static string Retrieve = "https://getpocket.com/v3/get";
@@ -52,11 +89,69 @@ namespace UniPocket.Shared.Services
             }
         }
 
-        public void SubscribeOAuthRequest(IObserver<string> observer, IDictionary<string, string> parameters = null, IProgress<Tuple<long, long>> progress = null)
+        public void SubscribeOAuthRequestToken(IObserver<string> observer, IDictionary<string, string> parameters = null, IProgress<Tuple<long, long>> progress = null)
         {
             var subscriptionKey = Guid.NewGuid();
 
-            var observable = DataClient.PostAsObservable(Authentication, parameters);
+            var observable = DataClient.PostAsObservable(ObtainRequestToken, parameters);
+            var disposal = observable.Finally(() => CleanupSubscription(subscriptionKey)).Subscribe(observer);
+
+            lock (SyncRoot)
+            {
+                CurrentSubscriptions.Add(subscriptionKey, disposal);
+            }
+        }
+
+        public void SubscribeRedirectUserForAuthorization(IObserver<string> observer,
+            IDictionary<string, string> parameters = null,
+            IProgress<Tuple<long, long>> progress = null)
+        {
+            var subscriptionKey = Guid.NewGuid();
+
+            var observable = DataClient.GetStringAsObservable(RedirectUser, parameters);
+            var disposal = observable.Finally(() => CleanupSubscription(subscriptionKey)).Subscribe(observer);
+
+            lock (SyncRoot)
+            {
+                CurrentSubscriptions.Add(subscriptionKey, disposal);
+            }
+        }
+
+        public void SubscribeSignInRequest(IObserver<string> observer,
+            IDictionary<string, string> parameters = null,
+            IProgress<Tuple<long, long>> progress = null)
+        {
+            var subscriptionKey = Guid.NewGuid();
+
+            var observable = DataClient.GetStringAsObservable(RedirectUser, parameters);
+            var disposal = observable.Finally(() => CleanupSubscription(subscriptionKey)).Subscribe(observer);
+
+            lock (SyncRoot)
+            {
+                CurrentSubscriptions.Add(subscriptionKey, disposal);
+            }
+        }
+
+        public void SubscribeAuthorization(IObserver<string> observer, IDictionary<string, string> parameters = null,
+            IProgress<Tuple<long, long>> progress = null)
+        {
+            var subscriptionKey = Guid.NewGuid();
+
+            var observable = DataClient.PostAsObservable(Authorization, parameters);
+            var disposal = observable.Finally(() => CleanupSubscription(subscriptionKey)).Subscribe(observer);
+
+            lock (SyncRoot)
+            {
+                CurrentSubscriptions.Add(subscriptionKey, disposal);
+            }
+        }
+
+        public void SubscribeSignInProcess(IObserver<string> observer, IDictionary<string, string> parameters = null,
+            IProgress<Tuple<long, long>> progress = null)
+        {
+            var subscriptionKey = Guid.NewGuid();
+
+            var observable = DataClient.PostAsObservable(SignInProcess, parameters);
             var disposal = observable.Finally(() => CleanupSubscription(subscriptionKey)).Subscribe(observer);
 
             lock (SyncRoot)

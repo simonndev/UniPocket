@@ -53,7 +53,8 @@
             <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
                       IsChecked="{Binding Path=IsRememberMe}">Remember me?</CheckBox>
 
-            <Button HorizontalAlignment="Center" Grid.Row="3" Grid.ColumnSpan="2">Go</Button>
+            <Button HorizontalAlignment="Center" Grid.Row="3" Grid.ColumnSpan="2"
+                    Command="{Binding Path=SignInCommand}">Go</Button>
 
             <!-- Add Storyboards to the visual states below as necessary for supporting the various layouts for the input section -->
             <VisualStateManager.VisualStateGroups>

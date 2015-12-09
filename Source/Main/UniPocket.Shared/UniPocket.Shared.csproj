@@ -109,13 +109,17 @@
   <ItemGroup>
     <Compile Include="Class1.cs" />
     <Compile Include="Observers\HttpContentObserver.cs" />
+    <Compile Include="Observers\ObtainRequestTokenObserver.cs" />
     <Compile Include="Observers\PocketObserverBase.cs" />
+    <Compile Include="Observers\RequestSignInObserver.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\PocketService.cs" />
     <Compile Include="ViewModels\SignInPageViewModel.cs" />
     <EmbeddedResource Include="Properties\UniPocket.Shared.rd.xml" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include="Views\HTMLPage1.html" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\UniApp\UniApp.Uwp\UniApp.Uwp.csproj">
       <Project>{b3d1ae9f-1beb-4dc8-8c33-f6d1ae017428}</Project>
